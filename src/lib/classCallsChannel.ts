@@ -4,7 +4,8 @@ import type { CallRow } from '@/lib/activeCalls'
 export function subscribeToClassCalls(
   client: SupabaseClient,
   className: string,
-  onInsert: (call: CallRow) => void
+  onInsert: (call: CallRow) => void,
+  onSubscribed?: () => void
 ): RealtimeChannel {
   return client
     .channel(`class-calls-${className}`)
@@ -13,5 +14,7 @@ export function subscribeToClassCalls(
       { event: 'INSERT', schema: 'public', table: 'calls', filter: `class=eq.${className}` },
       (payload) => onInsert(payload.new as CallRow)
     )
-    .subscribe()
+    .subscribe((status: string) => {
+      if (status === 'SUBSCRIBED') onSubscribed?.()
+    })
 }

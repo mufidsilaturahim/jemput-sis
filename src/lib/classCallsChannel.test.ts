@@ -41,4 +41,44 @@ describe('subscribeToClassCalls', () => {
       created_at: 'now',
     })
   })
+
+  it('wires a status callback and fires onSubscribed only on SUBSCRIBED', () => {
+    let statusCallback: (status: string) => void = () => {}
+    const subscribe = vi.fn((cb: (status: string) => void) => {
+      statusCallback = cb
+      return 'channel-instance'
+    })
+    const on = vi.fn().mockReturnValue({ subscribe })
+    const channel = vi.fn().mockReturnValue({ on })
+    const client = { channel } as never
+
+    const onSubscribed = vi.fn()
+    subscribeToClassCalls(client, '1B', vi.fn(), onSubscribed)
+
+    expect(subscribe).toHaveBeenCalledWith(expect.any(Function))
+
+    statusCallback('CHANNEL_ERROR')
+    expect(onSubscribed).not.toHaveBeenCalled()
+
+    statusCallback('CLOSED')
+    expect(onSubscribed).not.toHaveBeenCalled()
+
+    statusCallback('SUBSCRIBED')
+    expect(onSubscribed).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not throw when onSubscribed is omitted and status becomes SUBSCRIBED', () => {
+    let statusCallback: (status: string) => void = () => {}
+    const subscribe = vi.fn((cb: (status: string) => void) => {
+      statusCallback = cb
+      return 'channel-instance'
+    })
+    const on = vi.fn().mockReturnValue({ subscribe })
+    const channel = vi.fn().mockReturnValue({ on })
+    const client = { channel } as never
+
+    subscribeToClassCalls(client, '1B', vi.fn())
+
+    expect(() => statusCallback('SUBSCRIBED')).not.toThrow()
+  })
 })

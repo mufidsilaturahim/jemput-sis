@@ -69,3 +69,25 @@
     animation: none;
   }
 }
+
+.audioTag {
+  position: relative;
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--board);
+  background: var(--vermillion-soft);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.audioTag:hover,
+.audioTag:focus-visible {
+  background: var(--amber);
+  outline: none;
+}
