@@ -47,7 +47,13 @@ export default function PiketPage() {
         <StudentAutocomplete
           students={students}
           onSelect={submitting ? () => {} : handleSelect}
+          disabled={submitting}
         />
+        {submitting && (
+          <p role="status" className={styles.submitting}>
+            Mengirim…
+          </p>
+        )}
         {status.type === 'success' && (
           <p role="status" className={`${styles.stub} ${styles.stubSuccess}`}>
             {status.message}

@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
+export const ADMIN_SESSION_COOKIE_NAME = 'admin_session'
+
 const SESSION_PAYLOAD = 'jemput-sis-admin-session'
 
 export function computeSessionToken(secret: string): string {

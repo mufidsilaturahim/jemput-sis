@@ -1,8 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
-import { computeSessionToken } from '@/lib/adminSession'
-
-const COOKIE_NAME = 'admin_session'
+import { ADMIN_SESSION_COOKIE_NAME, computeSessionToken } from '@/lib/adminSession'
 
 function passwordsMatch(candidate: string, expected: string): boolean {
   const candidateBuf = Buffer.from(candidate)
@@ -30,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.json({ ok: true })
-  response.cookies.set(COOKIE_NAME, computeSessionToken(sessionSecret), {
+  response.cookies.set(ADMIN_SESSION_COOKIE_NAME, computeSessionToken(sessionSecret), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',

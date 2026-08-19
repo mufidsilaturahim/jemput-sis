@@ -28,6 +28,14 @@
   margin: 0 0 1.5rem;
 }
 
+.submitting {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
 .stub {
   margin-top: 1.5rem;
   padding: 1rem 1.25rem;
