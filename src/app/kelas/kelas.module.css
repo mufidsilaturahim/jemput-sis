@@ -68,11 +68,12 @@
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--board-line);
+  color: var(--paper-line);
   background: none;
-  border: none;
+  border: 1px solid var(--board-line);
+  border-radius: var(--radius-paper);
   cursor: pointer;
-  padding: 0;
+  padding: 0.4rem 0.75rem;
 }
 
 .changeClass:hover,
