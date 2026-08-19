@@ -1,0 +1,89 @@
+.picker {
+  min-height: 100vh;
+  background: var(--paper);
+  padding: 3rem 2rem;
+}
+
+.pickerTitle {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  margin: 0 0 1.5rem;
+}
+
+.gateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gateButton {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  padding: 1rem 0;
+  background: #fff;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-paper);
+  cursor: pointer;
+}
+
+.gateButton:hover,
+.gateButton:focus-visible {
+  border-color: var(--vermillion);
+  color: var(--vermillion);
+  outline: none;
+}
+
+.board {
+  min-height: 100vh;
+  background: var(--board);
+  color: var(--amber);
+  display: flex;
+  flex-direction: column;
+}
+
+.gateHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--board-line);
+}
+
+.gateLabel {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--vermillion-soft);
+}
+
+.gateClass {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.queue {
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty {
+  margin: auto;
+  text-align: center;
+  font-family: var(--font-mono);
+  color: var(--board-line);
+  letter-spacing: 0.08em;
+}
