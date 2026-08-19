@@ -20,6 +20,39 @@
 - Student mutations (create/update/delete) go through Next.js Route Handlers using the Supabase **service role key** (server-only); the anon key only ever gets `select` on `students` and `select`+`insert` on `calls` (enforced via Postgres RLS policies).
 - Out of scope for this plan: Excel/CSV import, call history/audit log, QR/barcode cards, offline mode, multi-piket accounts.
 
+## Visual Design System
+
+The product is styled as a **split-flap departure board** — `/kelas` literally *is* the
+board (a school's version of a station arrivals display), `/piket` is the ticket
+counter (loket) that feeds it, `/admin` is the plain back-office ledger behind the
+counter. Styling uses CSS Modules (one `*.module.css` per component/page) plus
+`next/font/google` for fonts — no Tailwind, no extra styling dependency.
+
+**Color tokens** (defined as CSS custom properties in `src/app/globals.css`):
+
+| Token | Hex | Used for |
+|---|---|---|
+| `--ink` | `#1C1F1D` | body text on paper surfaces |
+| `--ink-soft` | `#4B4A42` | secondary text, eyebrows on paper |
+| `--paper` | `#ECE6D8` | `/piket` and `/admin` background (manifest paper) |
+| `--paper-line` | `#C9C2AC` | hairline rules/borders on paper surfaces |
+| `--board` | `#14181A` | `/kelas` background (board casing) |
+| `--board-line` | `#262B2A` | seams/borders on the board |
+| `--amber` | `#F2A93B` | split-flap character color (student name on the board) |
+| `--vermillion` | `#D14124` | call-to-action / alert accent (Panggil button, focus, new-call cue) |
+| `--vermillion-soft` | `#E77A63` | secondary accent (class code on the board) |
+
+**Type roles:**
+- **Display** — Oswald (600/700, uppercase, tracked) via `next/font/google`. Used for the student name on `/kelas` cards and page headings. Reserved for the "spoken" moment — used sparingly.
+- **Body** — IBM Plex Sans (400/500/600). All form labels, buttons, running text.
+- **Utility/mono** — IBM Plex Mono (400/500). Gate labels, class codes, timestamps — anything that reads as data rather than prose.
+
+**Signature interaction:** when a `CallCard` mounts on `/kelas`, it plays a single
+`flapDrop` CSS keyframe — a 3D `rotateX(-90deg) → rotateX(0deg)` fall, echoing a
+physical split-flap segment dropping into place. This is the only animated moment
+in the product; everything else (piket, admin) is static and quiet. Respects
+`prefers-reduced-motion` (disabled entirely when set).
+
 ---
 
 ### Task 1: Project Scaffolding & Supabase Schema
@@ -32,12 +65,14 @@
 - Create: `vitest.setup.ts`
 - Create: `.gitignore`
 - Create: `.env.local.example`
+- Create: `src/app/globals.css`
 - Create: `src/app/layout.tsx`
+- Create: `src/app/page.module.css`
 - Create: `src/app/page.tsx`
 - Create: `supabase/schema.sql`
 
 **Interfaces:**
-- Produces: `@/*` path alias resolving to `src/*` (used by every later task's imports), Vitest configured with `jsdom` environment and `@testing-library/jest-dom` matchers loaded globally.
+- Produces: `@/*` path alias resolving to `src/*` (used by every later task's imports), Vitest configured with `jsdom` environment and `@testing-library/jest-dom` matchers loaded globally, the `--ink`/`--paper`/`--board`/`--amber`/`--vermillion`/etc. CSS custom properties from `src/app/globals.css` and the `--font-oswald`/`--font-plex-sans`/`--font-plex-mono` font variables from `src/app/layout.tsx` (both consumed by every later task's `*.module.css` file).
 
 - [ ] **Step 1: Create `package.json`**
 
@@ -152,40 +187,183 @@ ADMIN_PASSWORD=
 ADMIN_SESSION_SECRET=
 ```
 
-- [ ] **Step 8: Create `src/app/layout.tsx`**
+- [ ] **Step 8: Create `src/app/globals.css`**
+
+```css
+:root {
+  --ink: #1c1f1d;
+  --ink-soft: #4b4a42;
+  --paper: #ece6d8;
+  --paper-line: #c9c2ac;
+  --board: #14181a;
+  --board-line: #262b2a;
+  --amber: #f2a93b;
+  --vermillion: #d14124;
+  --vermillion-soft: #e77a63;
+  --radius-paper: 6px;
+  --font-display: var(--font-oswald), 'Arial Narrow', sans-serif;
+  --font-body: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+- [ ] **Step 9: Create `src/app/layout.tsx`**
 
 ```tsx
+import { Oswald, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import './globals.css'
+
+const oswald = Oswald({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  variable: '--font-oswald',
+})
+
+const plexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-plex-sans',
+})
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-plex-mono',
+})
+
 export const metadata = {
   title: 'Jemput SIS',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id">
+    <html lang="id" className={`${oswald.variable} ${plexSans.variable} ${plexMono.variable}`}>
       <body>{children}</body>
     </html>
   )
 }
 ```
 
-- [ ] **Step 9: Create `src/app/page.tsx`**
+- [ ] **Step 10: Create `src/app/page.module.css`**
+
+```css
+.directory {
+  min-height: 100vh;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.title {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: clamp(2rem, 6vw, 3rem);
+  margin: 0;
+}
+
+.tagline {
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
+  margin: -1rem 0 0;
+}
+
+.gates {
+  list-style: none;
+  display: flex;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.gate {
+  display: inline-block;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink);
+  padding: 1rem 1.5rem;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-paper);
+  background: #fff;
+}
+
+.gate:hover,
+.gate:focus-visible {
+  border-color: var(--vermillion);
+  color: var(--vermillion);
+  outline: none;
+}
+```
+
+- [ ] **Step 11: Create `src/app/page.tsx`**
 
 ```tsx
 import Link from 'next/link'
+import styles from './page.module.css'
 
 export default function HomePage() {
   return (
-    <main>
-      <h1>Jemput SIS</h1>
-      <ul>
+    <main className={styles.directory}>
+      <div>
+        <h1 className={styles.title}>Jemput SIS</h1>
+        <p className={styles.tagline}>Papan panggilan jemputan sekolah</p>
+      </div>
+      <ul className={styles.gates}>
         <li>
-          <Link href="/piket">Guru Piket</Link>
+          <Link className={styles.gate} href="/piket">
+            Guru Piket
+          </Link>
         </li>
         <li>
-          <Link href="/kelas">Guru Kelas</Link>
+          <Link className={styles.gate} href="/kelas">
+            Guru Kelas
+          </Link>
         </li>
         <li>
-          <Link href="/admin">Admin</Link>
+          <Link className={styles.gate} href="/admin">
+            Admin
+          </Link>
         </li>
       </ul>
     </main>
@@ -193,7 +371,7 @@ export default function HomePage() {
 }
 ```
 
-- [ ] **Step 10: Create `supabase/schema.sql`**
+- [ ] **Step 12: Create `supabase/schema.sql`**
 
 ```sql
 create extension if not exists pgcrypto;
@@ -233,20 +411,20 @@ create policy "calls_insert_anon" on calls
 alter publication supabase_realtime add table calls;
 ```
 
-- [ ] **Step 11: Install dependencies and verify the project builds**
+- [ ] **Step 13: Install dependencies and verify the project builds**
 
 Run: `npm install && npm run build`
-Expected: build succeeds (pages `/`, `/piket` placeholder-free — only `/` exists so far — compile with no errors).
+Expected: build succeeds (only `/` exists so far, compiles with no errors, fonts resolve via `next/font/google`).
 
-- [ ] **Step 12: Manually create the Supabase project**
+- [ ] **Step 14: Manually create the Supabase project**
 
 In the Supabase dashboard: create a new project, run `supabase/schema.sql` in the SQL editor, then copy the Project URL, `anon` key, and `service_role` key into a local `.env.local` (not committed) following `.env.local.example`. Also set `ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET` (any long random string) in `.env.local`.
 
-- [ ] **Step 13: Commit**
+- [ ] **Step 15: Commit**
 
 ```bash
-git add package.json tsconfig.json next.config.mjs vitest.config.ts vitest.setup.ts .gitignore .env.local.example src/app/layout.tsx src/app/page.tsx supabase/schema.sql
-git commit -m "chore: scaffold Next.js project and Supabase schema"
+git add package.json tsconfig.json next.config.mjs vitest.config.ts vitest.setup.ts .gitignore .env.local.example src/app/globals.css src/app/layout.tsx src/app/page.module.css src/app/page.tsx supabase/schema.sql
+git commit -m "chore: scaffold Next.js project, design tokens, and Supabase schema"
 ```
 
 ---
@@ -1254,6 +1432,7 @@ git commit -m "feat: add admin-gated students CRUD API routes"
 
 **Files:**
 - Create: `src/components/CallCard.tsx`
+- Create: `src/components/CallCard.module.css`
 - Test: `src/components/CallCard.test.tsx`
 - Manual asset: `public/call-notification.mp3`
 
@@ -1314,13 +1493,94 @@ describe('CallCard', () => {
 Run: `npx vitest run src/components/CallCard.test.tsx`
 Expected: FAIL — `./CallCard` module does not exist.
 
-- [ ] **Step 4: Write `src/components/CallCard.tsx`**
+- [ ] **Step 4: Write `src/components/CallCard.module.css`**
+
+The signature interaction: a call card falls into place like a physical split-flap
+segment dropping (`rotateX(-90deg) → 0deg`), then sits still — the only animated
+moment on the whole board.
+
+```css
+.card {
+  position: relative;
+  background: var(--board);
+  border: 1px solid var(--board-line);
+  border-radius: 2px;
+  padding: 1.25rem 1.75rem;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  transform-origin: top center;
+  animation: flapDrop 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 40%);
+  pointer-events: none;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.name {
+  position: relative;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--amber);
+  line-height: 1.05;
+}
+
+.class {
+  position: relative;
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--vermillion-soft);
+}
+
+@keyframes flapDrop {
+  0% {
+    transform: rotateX(-90deg);
+    opacity: 0;
+  }
+  60% {
+    transform: rotateX(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}
+```
+
+- [ ] **Step 5: Write `src/components/CallCard.tsx`**
 
 ```tsx
 'use client'
 
 import { useEffect } from 'react'
 import { ACTIVE_CALL_WINDOW_MS } from '@/lib/activeCalls'
+import styles from './CallCard.module.css'
 
 export interface CallCardProps {
   studentName: string
@@ -1343,24 +1603,24 @@ export function CallCard({ studentName, className, onExpire }: CallCardProps) {
   }, [studentName, className, onExpire])
 
   return (
-    <div className="call-card">
-      <p className="call-card__name">{studentName}</p>
-      <p className="call-card__class">{className}</p>
+    <div className={styles.card}>
+      <p className={styles.name}>{studentName}</p>
+      <p className={styles.class}>{className}</p>
     </div>
   )
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [ ] **Step 6: Run test to verify it passes**
 
 Run: `npx vitest run src/components/CallCard.test.tsx`
 Expected: PASS (3 tests)
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/components/CallCard.tsx src/components/CallCard.test.tsx public/call-notification.mp3
-git commit -m "feat: add CallCard component with sound, vibrate, and auto-expire"
+git add src/components/CallCard.tsx src/components/CallCard.module.css src/components/CallCard.test.tsx public/call-notification.mp3
+git commit -m "feat: add CallCard component with sound, vibrate, and flap-drop animation"
 ```
 
 ---
@@ -1369,6 +1629,7 @@ git commit -m "feat: add CallCard component with sound, vibrate, and auto-expire
 
 **Files:**
 - Create: `src/components/StudentAutocomplete.tsx`
+- Create: `src/components/StudentAutocomplete.module.css`
 - Test: `src/components/StudentAutocomplete.test.tsx`
 
 **Interfaces:**
@@ -1414,13 +1675,72 @@ describe('StudentAutocomplete', () => {
 Run: `npx vitest run src/components/StudentAutocomplete.test.tsx`
 Expected: FAIL — `./StudentAutocomplete` module does not exist.
 
-- [ ] **Step 3: Write `src/components/StudentAutocomplete.tsx`**
+- [ ] **Step 3: Write `src/components/StudentAutocomplete.module.css`**
+
+```css
+.field {
+  display: block;
+}
+
+.input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-paper);
+  background: #fff;
+  color: var(--ink);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--vermillion);
+  outline-offset: 2px;
+  border-color: var(--vermillion);
+}
+
+.results {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  border-radius: var(--radius-paper);
+  overflow: hidden;
+  border: 1px solid var(--paper-line);
+}
+
+.result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: none;
+  border-bottom: 1px solid var(--paper-line);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.result:last-child {
+  border-bottom: none;
+}
+
+.result:hover,
+.result:focus-visible {
+  background: var(--paper);
+  color: var(--vermillion);
+  outline: none;
+}
+```
+
+- [ ] **Step 4: Write `src/components/StudentAutocomplete.tsx`**
 
 ```tsx
 'use client'
 
 import { useState } from 'react'
 import { searchStudents, type Student } from '@/lib/studentSearch'
+import styles from './StudentAutocomplete.module.css'
 
 export interface StudentAutocompleteProps {
   students: Student[]
@@ -1432,19 +1752,21 @@ export function StudentAutocomplete({ students, onSelect }: StudentAutocompleteP
   const results = searchStudents(students, query)
 
   return (
-    <div className="student-autocomplete">
+    <div className={styles.field}>
       <input
         type="text"
+        className={styles.input}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Cari nama siswa..."
         aria-label="Cari nama siswa"
       />
-      <ul>
+      <ul className={styles.results}>
         {results.map((student) => (
           <li key={student.id}>
             <button
               type="button"
+              className={styles.result}
               onClick={() => {
                 onSelect(student)
                 setQuery('')
@@ -1460,15 +1782,15 @@ export function StudentAutocomplete({ students, onSelect }: StudentAutocompleteP
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run src/components/StudentAutocomplete.test.tsx`
 Expected: PASS (2 tests)
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/StudentAutocomplete.tsx src/components/StudentAutocomplete.test.tsx
+git add src/components/StudentAutocomplete.tsx src/components/StudentAutocomplete.module.css src/components/StudentAutocomplete.test.tsx
 git commit -m "feat: add student search autocomplete component"
 ```
 
@@ -1479,6 +1801,7 @@ git commit -m "feat: add student search autocomplete component"
 **Files:**
 - Create: `src/lib/classCallsChannel.ts`
 - Test: `src/lib/classCallsChannel.test.ts`
+- Create: `src/app/kelas/kelas.module.css`
 - Create: `src/app/kelas/page.tsx`
 
 **Interfaces:**
@@ -1566,7 +1889,104 @@ export function subscribeToClassCalls(
 Run: `npx vitest run src/lib/classCallsChannel.test.ts`
 Expected: PASS (2 tests)
 
-- [ ] **Step 5: Write `src/app/kelas/page.tsx`**
+- [ ] **Step 5: Write `src/app/kelas/kelas.module.css`**
+
+Two surfaces in one file: the paper "pick a gate" screen (before a class is
+chosen) and the dark board itself (after).
+
+```css
+.picker {
+  min-height: 100vh;
+  background: var(--paper);
+  padding: 3rem 2rem;
+}
+
+.pickerTitle {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  margin: 0 0 1.5rem;
+}
+
+.gateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gateButton {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  padding: 1rem 0;
+  background: #fff;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-paper);
+  cursor: pointer;
+}
+
+.gateButton:hover,
+.gateButton:focus-visible {
+  border-color: var(--vermillion);
+  color: var(--vermillion);
+  outline: none;
+}
+
+.board {
+  min-height: 100vh;
+  background: var(--board);
+  color: var(--amber);
+  display: flex;
+  flex-direction: column;
+}
+
+.gateHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--board-line);
+}
+
+.gateLabel {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--vermillion-soft);
+}
+
+.gateClass {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.queue {
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty {
+  margin: auto;
+  text-align: center;
+  font-family: var(--font-mono);
+  color: var(--board-line);
+  letter-spacing: 0.08em;
+}
+```
+
+- [ ] **Step 6: Write `src/app/kelas/page.tsx`**
 
 ```tsx
 'use client'
@@ -1576,6 +1996,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabaseClient'
 import { ACTIVE_CALL_WINDOW_MS, filterActiveCalls, type CallRow } from '@/lib/activeCalls'
 import { subscribeToClassCalls } from '@/lib/classCallsChannel'
 import { CallCard } from '@/components/CallCard'
+import styles from './kelas.module.css'
 
 const CLASS_STORAGE_KEY = 'jemput-sis:selected-class'
 
@@ -1647,12 +2068,16 @@ export default function KelasPage() {
 
   if (!selectedClass) {
     return (
-      <main>
-        <h1>Pilih Kelas</h1>
-        <ul>
+      <main className={styles.picker}>
+        <h1 className={styles.pickerTitle}>Pilih Kelas</h1>
+        <ul className={styles.gateGrid}>
           {availableClasses.map((className) => (
             <li key={className}>
-              <button type="button" onClick={() => selectClass(className)}>
+              <button
+                type="button"
+                className={styles.gateButton}
+                onClick={() => selectClass(className)}
+              >
                 {className}
               </button>
             </li>
@@ -1663,32 +2088,39 @@ export default function KelasPage() {
   }
 
   return (
-    <main>
-      <h1>Antrian Jemputan — {selectedClass}</h1>
-      <div className="call-queue">
-        {calls.map((call) => (
-          <CallCard
-            key={call.id}
-            studentName={call.student_name}
-            className={call.class}
-            onExpire={() => setCalls((current) => current.filter((c) => c.id !== call.id))}
-          />
-        ))}
+    <main className={styles.board}>
+      <header className={styles.gateHeader}>
+        <span className={styles.gateLabel}>Antrian Jemputan</span>
+        <h1 className={styles.gateClass}>{selectedClass}</h1>
+      </header>
+      <div className={styles.queue}>
+        {calls.length === 0 ? (
+          <p className={styles.empty}>Menunggu panggilan pertama hari ini.</p>
+        ) : (
+          calls.map((call) => (
+            <CallCard
+              key={call.id}
+              studentName={call.student_name}
+              className={call.class}
+              onExpire={() => setCalls((current) => current.filter((c) => c.id !== call.id))}
+            />
+          ))
+        )}
       </div>
     </main>
   )
 }
 ```
 
-- [ ] **Step 6: Manual end-to-end verification**
+- [ ] **Step 7: Manual end-to-end verification**
 
-Run `npm run dev`, open `/kelas` on one device, select a class. In another tab open `/piket` (built in Task 11) — this step will be re-verified after Task 11 exists. For now, confirm `/kelas` loads, the class picker lists classes seeded in `students`, and picking a class persists across a page reload (`localStorage`).
+Run `npm run dev`, open `/kelas` on one device, select a class. In another tab open `/piket` (built in Task 11) — this step will be re-verified after Task 11 exists. For now, confirm `/kelas` loads, the class picker lists classes seeded in `students`, picking a class persists across a page reload (`localStorage`), and the empty board shows "Menunggu panggilan pertama hari ini."
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/lib/classCallsChannel.ts src/lib/classCallsChannel.test.ts src/app/kelas/page.tsx
-git commit -m "feat: add realtime class-calls subscription and /kelas page"
+git add src/lib/classCallsChannel.ts src/lib/classCallsChannel.test.ts src/app/kelas
+git commit -m "feat: add realtime class-calls subscription and /kelas board page"
 ```
 
 ---
@@ -1698,6 +2130,7 @@ git commit -m "feat: add realtime class-calls subscription and /kelas page"
 **Files:**
 - Create: `src/lib/submitCall.ts`
 - Test: `src/lib/submitCall.test.ts`
+- Create: `src/app/piket/piket.module.css`
 - Create: `src/app/piket/page.tsx`
 
 **Interfaces:**
@@ -1772,7 +2205,64 @@ export async function submitCall(
 Run: `npx vitest run src/lib/submitCall.test.ts`
 Expected: PASS (2 tests)
 
-- [ ] **Step 5: Write `src/app/piket/page.tsx`**
+- [ ] **Step 5: Write `src/app/piket/piket.module.css`**
+
+The confirmation renders like a torn ticket stub — dashed border, mono type —
+rather than a generic toast.
+
+```css
+.counter {
+  min-height: 100vh;
+  background: var(--paper);
+  padding: 3rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.window {
+  width: 100%;
+  max-width: 480px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 0.25rem;
+}
+
+.title {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  margin: 0 0 1.5rem;
+}
+
+.stub {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px dashed var(--paper-line);
+  border-radius: var(--radius-paper);
+  font-family: var(--font-mono);
+}
+
+.stubSuccess {
+  border-color: var(--amber);
+  color: var(--ink);
+}
+
+.stubError {
+  border-color: var(--vermillion);
+  border-style: solid;
+  color: var(--vermillion);
+}
+```
+
+- [ ] **Step 6: Write `src/app/piket/page.tsx`**
 
 ```tsx
 'use client'
@@ -1782,6 +2272,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabaseClient'
 import { submitCall } from '@/lib/submitCall'
 import { StudentAutocomplete } from '@/components/StudentAutocomplete'
 import type { Student } from '@/lib/studentSearch'
+import styles from './piket.module.css'
 
 export default function PiketPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), [])
@@ -1816,25 +2307,39 @@ export default function PiketPage() {
   }
 
   return (
-    <main>
-      <h1>Panggil Siswa</h1>
-      <StudentAutocomplete students={students} onSelect={submitting ? () => {} : handleSelect} />
-      {status.type === 'success' && <p role="status">{status.message}</p>}
-      {status.type === 'error' && <p role="alert">{status.message}</p>}
+    <main className={styles.counter}>
+      <div className={styles.window}>
+        <p className={styles.eyebrow}>Loket Jemputan</p>
+        <h1 className={styles.title}>Panggil Siswa</h1>
+        <StudentAutocomplete
+          students={students}
+          onSelect={submitting ? () => {} : handleSelect}
+        />
+        {status.type === 'success' && (
+          <p role="status" className={`${styles.stub} ${styles.stubSuccess}`}>
+            {status.message}
+          </p>
+        )}
+        {status.type === 'error' && (
+          <p role="alert" className={`${styles.stub} ${styles.stubError}`}>
+            {status.message}
+          </p>
+        )}
+      </div>
     </main>
   )
 }
 ```
 
-- [ ] **Step 6: Manual end-to-end verification**
+- [ ] **Step 7: Manual end-to-end verification**
 
-Seed a few rows in `students` via the Supabase dashboard SQL editor. Run `npm run dev`, open `/piket` in one browser/device and `/kelas` (pick the matching class) in another. Search a student name in `/piket`, click it, and confirm within ~1 second the call card appears in `/kelas` with sound + vibration, then disappears after 60 seconds. Then toggle the `/kelas` device's WiFi off and back on mid-session and confirm a call made while offline still appears once reconnected.
+Seed a few rows in `students` via the Supabase dashboard SQL editor. Run `npm run dev`, open `/piket` in one browser/device and `/kelas` (pick the matching class) in another. Search a student name in `/piket`, click it, and confirm within ~1 second the call card flap-drops into `/kelas` with sound + vibration, then disappears after 60 seconds. Then toggle the `/kelas` device's WiFi off and back on mid-session and confirm a call made while offline still appears once reconnected.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/lib/submitCall.ts src/lib/submitCall.test.ts src/app/piket/page.tsx
-git commit -m "feat: add call-submission logic and /piket page"
+git add src/lib/submitCall.ts src/lib/submitCall.test.ts src/app/piket
+git commit -m "feat: add call-submission logic and /piket counter page"
 ```
 
 ---
@@ -1843,9 +2348,12 @@ git commit -m "feat: add call-submission logic and /piket page"
 
 **Files:**
 - Create: `src/components/StudentForm.tsx`
+- Create: `src/components/StudentForm.module.css`
 - Test: `src/components/StudentForm.test.tsx`
 - Create: `src/components/StudentList.tsx`
+- Create: `src/components/StudentList.module.css`
 - Test: `src/components/StudentList.test.tsx`
+- Create: `src/app/admin/admin.module.css`
 - Create: `src/app/admin/login/page.tsx`
 - Create: `src/app/admin/page.tsx`
 
@@ -1898,12 +2406,76 @@ describe('StudentForm', () => {
 Run: `npx vitest run src/components/StudentForm.test.tsx`
 Expected: FAIL — `./StudentForm` module does not exist.
 
-- [ ] **Step 3: Write `src/components/StudentForm.tsx`**
+- [ ] **Step 3: Write `src/components/StudentForm.module.css`**
+
+```css
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.input {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--paper-line);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--ink);
+  min-width: 160px;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--vermillion);
+  outline-offset: 2px;
+}
+
+.submit {
+  font-family: var(--font-body);
+  font-weight: 600;
+  padding: 0.65rem 1.25rem;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.submit:hover,
+.submit:focus-visible {
+  background: var(--vermillion);
+  outline: none;
+}
+
+.error {
+  flex-basis: 100%;
+  color: var(--vermillion);
+  font-size: 0.85rem;
+  margin: 0;
+}
+```
+
+- [ ] **Step 4: Write `src/components/StudentForm.tsx`**
 
 ```tsx
 'use client'
 
 import { useState, type FormEvent } from 'react'
+import styles from './StudentForm.module.css'
 
 export interface StudentFormProps {
   onSubmit: (name: string, className: string) => void
@@ -1933,28 +2505,38 @@ export function StudentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label>
+    <form className={styles.form} onSubmit={handleSubmit}>
+      <label className={styles.field}>
         Nama
-        <input value={name} onChange={(e) => setName(e.target.value)} />
+        <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} />
       </label>
-      <label>
+      <label className={styles.field}>
         Kelas
-        <input value={className} onChange={(e) => setClassName(e.target.value)} />
+        <input
+          className={styles.input}
+          value={className}
+          onChange={(e) => setClassName(e.target.value)}
+        />
       </label>
-      {error && <p role="alert">{error}</p>}
-      <button type="submit">{submitLabel}</button>
+      {error && (
+        <p role="alert" className={styles.error}>
+          {error}
+        </p>
+      )}
+      <button type="submit" className={styles.submit}>
+        {submitLabel}
+      </button>
     </form>
   )
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run src/components/StudentForm.test.tsx`
 Expected: PASS (3 tests)
 
-- [ ] **Step 5: Write the failing tests for StudentList**
+- [ ] **Step 6: Write the failing tests for StudentList**
 
 ```tsx
 import { describe, it, expect, vi } from 'vitest'
@@ -1994,12 +2576,58 @@ describe('StudentList', () => {
 })
 ```
 
-- [ ] **Step 6: Run test to verify it fails**
+- [ ] **Step 7: Run test to verify it fails**
 
 Run: `npx vitest run src/components/StudentList.test.tsx`
 Expected: FAIL — `./StudentList` module does not exist.
 
-- [ ] **Step 7: Write `src/components/StudentList.tsx`**
+- [ ] **Step 8: Write `src/components/StudentList.module.css`**
+
+```css
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--paper-line);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--paper-line);
+  font-family: var(--font-body);
+}
+
+.name {
+  font-family: var(--font-mono);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actionButton {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--paper-line);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.actionButton:hover,
+.actionButton:focus-visible {
+  border-color: var(--vermillion);
+  color: var(--vermillion);
+  outline: none;
+}
+```
+
+- [ ] **Step 9: Write `src/components/StudentList.tsx`**
 
 ```tsx
 'use client'
@@ -2007,6 +2635,7 @@ Expected: FAIL — `./StudentList` module does not exist.
 import { useState } from 'react'
 import type { Student } from '@/lib/studentSearch'
 import { StudentForm } from './StudentForm'
+import styles from './StudentList.module.css'
 
 export interface StudentListProps {
   students: Student[]
@@ -2018,9 +2647,9 @@ export function StudentList({ students, onDelete, onUpdate }: StudentListProps) 
   const [editingId, setEditingId] = useState<string | null>(null)
 
   return (
-    <ul>
+    <ul className={styles.list}>
       {students.map((student) => (
-        <li key={student.id}>
+        <li key={student.id} className={editingId === student.id ? undefined : styles.row}>
           {editingId === student.id ? (
             <StudentForm
               submitLabel="Simpan"
@@ -2033,15 +2662,25 @@ export function StudentList({ students, onDelete, onUpdate }: StudentListProps) 
             />
           ) : (
             <>
-              <span>
+              <span className={styles.name}>
                 {student.name} — {student.class}
               </span>
-              <button type="button" onClick={() => setEditingId(student.id)}>
-                Edit
-              </button>
-              <button type="button" onClick={() => onDelete(student.id)}>
-                Hapus
-              </button>
+              <span className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => setEditingId(student.id)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => onDelete(student.id)}
+                >
+                  Hapus
+                </button>
+              </span>
             </>
           )}
         </li>
@@ -2051,18 +2690,109 @@ export function StudentList({ students, onDelete, onUpdate }: StudentListProps) 
 }
 ```
 
-- [ ] **Step 8: Run test to verify it passes**
+- [ ] **Step 10: Run test to verify it passes**
 
 Run: `npx vitest run src/components/StudentList.test.tsx`
 Expected: PASS (3 tests)
 
-- [ ] **Step 9: Write `src/app/admin/login/page.tsx`**
+- [ ] **Step 11: Write `src/app/admin/admin.module.css`**
+
+Shared by both the login screen and the student ledger — deliberately the
+quietest surface in the product, no board theatrics.
+
+```css
+.login {
+  min-height: 100vh;
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 360px;
+}
+
+.title {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  margin: 0 0 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 1rem;
+}
+
+.input {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--paper-line);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--vermillion);
+  outline-offset: 2px;
+}
+
+.submit {
+  font-family: var(--font-body);
+  font-weight: 600;
+  padding: 0.65rem 1.25rem;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.submit:hover,
+.submit:focus-visible {
+  background: var(--vermillion);
+  outline: none;
+}
+
+.error {
+  color: var(--vermillion);
+  font-size: 0.85rem;
+  margin: 0 0 1rem;
+}
+
+.ledger {
+  min-height: 100vh;
+  background: var(--paper);
+  padding: 3rem 1.5rem;
+}
+
+.ledgerInner {
+  max-width: 640px;
+  margin: 0 auto;
+}
+```
+
+- [ ] **Step 12: Write `src/app/admin/login/page.tsx`**
 
 ```tsx
 'use client'
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import styles from '../admin.module.css'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -2087,26 +2817,35 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main>
-      <h1>Login Admin</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        {error && <p role="alert">{error}</p>}
-        <button type="submit">Masuk</button>
-      </form>
+    <main className={styles.login}>
+      <div className={styles.loginCard}>
+        <h1 className={styles.title}>Login Admin</h1>
+        <form onSubmit={handleSubmit}>
+          <label className={styles.field}>
+            Password
+            <input
+              type="password"
+              className={styles.input}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          {error && (
+            <p role="alert" className={styles.error}>
+              {error}
+            </p>
+          )}
+          <button type="submit" className={styles.submit}>
+            Masuk
+          </button>
+        </form>
+      </div>
     </main>
   )
 }
 ```
 
-- [ ] **Step 10: Write `src/app/admin/page.tsx`**
+- [ ] **Step 13: Write `src/app/admin/page.tsx`**
 
 ```tsx
 'use client'
@@ -2116,6 +2855,7 @@ import { useRouter } from 'next/navigation'
 import { StudentForm } from '@/components/StudentForm'
 import { StudentList } from '@/components/StudentList'
 import type { Student } from '@/lib/studentSearch'
+import styles from './admin.module.css'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -2179,24 +2919,26 @@ export default function AdminPage() {
   if (!checked) return null
 
   return (
-    <main>
-      <h1>Kelola Siswa</h1>
-      <StudentForm submitLabel="Tambah" onSubmit={handleAdd} />
-      <StudentList students={students} onUpdate={handleUpdate} onDelete={handleDelete} />
+    <main className={styles.ledger}>
+      <div className={styles.ledgerInner}>
+        <h1 className={styles.title}>Kelola Siswa</h1>
+        <StudentForm submitLabel="Tambah" onSubmit={handleAdd} />
+        <StudentList students={students} onUpdate={handleUpdate} onDelete={handleDelete} />
+      </div>
     </main>
   )
 }
 ```
 
-- [ ] **Step 11: Manual end-to-end verification**
+- [ ] **Step 14: Manual end-to-end verification**
 
 Run `npm run dev`, open `/admin` without a session and confirm it redirects to `/admin/login`. Log in with the wrong password and confirm the error message shows. Log in with the correct `ADMIN_PASSWORD` and confirm it redirects to `/admin`, lists seeded students, and that add/edit/delete all work and immediately reflect in `/piket`'s autocomplete on reload.
 
-- [ ] **Step 12: Commit**
+- [ ] **Step 15: Commit**
 
 ```bash
-git add src/components/StudentForm.tsx src/components/StudentForm.test.tsx src/components/StudentList.tsx src/components/StudentList.test.tsx src/app/admin
-git commit -m "feat: add admin login and student management pages"
+git add src/components/StudentForm.tsx src/components/StudentForm.module.css src/components/StudentForm.test.tsx src/components/StudentList.tsx src/components/StudentList.module.css src/components/StudentList.test.tsx src/app/admin
+git commit -m "feat: add admin login and student ledger pages"
 ```
 
 ---
