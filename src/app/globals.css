@@ -1,0 +1,46 @@
+:root {
+  --ink: #1c1f1d;
+  --ink-soft: #4b4a42;
+  --paper: #ece6d8;
+  --paper-line: #c9c2ac;
+  --board: #14181a;
+  --board-line: #262b2a;
+  --amber: #f2a93b;
+  --vermillion: #d14124;
+  --vermillion-soft: #e77a63;
+  --radius-paper: 6px;
+  --font-display: var(--font-oswald), 'Arial Narrow', sans-serif;
+  --font-body: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
