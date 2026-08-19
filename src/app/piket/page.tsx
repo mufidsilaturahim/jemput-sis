@@ -10,6 +10,7 @@ import styles from './piket.module.css'
 export default function PiketPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), [])
   const [students, setStudents] = useState<Student[]>([])
+  const [selectedClass, setSelectedClass] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [status, setStatus] = useState<{ type: 'idle' | 'success' | 'error'; message?: string }>({
     type: 'idle',
@@ -22,6 +23,19 @@ export default function PiketPage() {
     }
     loadStudents()
   }, [supabase])
+
+  const availableClasses = useMemo(
+    () => Array.from(new Set(students.map((student) => student.class))).sort(),
+    [students]
+  )
+
+  const classStudents = useMemo(
+    () =>
+      students
+        .filter((student) => student.class === selectedClass)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [students, selectedClass]
+  )
 
   async function handleSelect(student: Student) {
     setSubmitting(true)
@@ -39,6 +53,10 @@ export default function PiketPage() {
     }
   }
 
+  function toggleClass(className: string) {
+    setSelectedClass((current) => (current === className ? null : className))
+  }
+
   return (
     <main className={styles.counter}>
       <div className={styles.window}>
@@ -49,6 +67,52 @@ export default function PiketPage() {
           onSelect={submitting ? () => {} : handleSelect}
           disabled={submitting}
         />
+
+        {availableClasses.length > 0 && (
+          <>
+            <p className={styles.divider}>atau pilih kelas</p>
+            <div className={styles.classPicker}>
+              {availableClasses.map((className) => (
+                <button
+                  key={className}
+                  type="button"
+                  className={
+                    selectedClass === className
+                      ? `${styles.classButton} ${styles.classButtonActive}`
+                      : styles.classButton
+                  }
+                  onClick={() => toggleClass(className)}
+                >
+                  {className}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {selectedClass && (
+          <ul className={styles.classResults}>
+            {classStudents.length === 0 ? (
+              <li className={styles.classResultsEmpty}>Belum ada siswa di kelas ini.</li>
+            ) : (
+              classStudents.map((student) => (
+                <li key={student.id}>
+                  <button
+                    type="button"
+                    className={styles.classResult}
+                    disabled={submitting}
+                    onClick={() => {
+                      if (!submitting) handleSelect(student)
+                    }}
+                  >
+                    {student.name}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+
         {submitting && (
           <p role="status" className={styles.submitting}>
             Mengirim…
