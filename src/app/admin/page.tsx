@@ -11,16 +11,21 @@ export default function AdminPage() {
   const router = useRouter()
   const [students, setStudents] = useState<Student[]>([])
   const [checked, setChecked] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function checkSession() {
-      const res = await fetch('/api/admin/session')
-      const { authenticated } = await res.json()
-      if (!authenticated) {
-        router.push('/admin/login')
-        return
+      try {
+        const res = await fetch('/api/admin/session')
+        const { authenticated } = await res.json()
+        if (!authenticated) {
+          router.push('/admin/login')
+          return
+        }
+        setChecked(true)
+      } catch {
+        setError('Gagal memeriksa sesi — periksa koneksi lalu muat ulang halaman.')
       }
-      setChecked(true)
     }
     checkSession()
   }, [router])
@@ -44,6 +49,10 @@ export default function AdminPage() {
     if (res.ok) {
       const { student } = await res.json()
       setStudents((current) => [...current, student])
+      setError(null)
+    } else {
+      const body = await res.json().catch(() => null)
+      setError(body?.error ?? 'Gagal menambah siswa')
     }
   }
 
@@ -56,6 +65,10 @@ export default function AdminPage() {
     if (res.ok) {
       const { student } = await res.json()
       setStudents((current) => current.map((s) => (s.id === id ? student : s)))
+      setError(null)
+    } else {
+      const body = await res.json().catch(() => null)
+      setError(body?.error ?? 'Gagal memperbarui siswa')
     }
   }
 
@@ -63,17 +76,30 @@ export default function AdminPage() {
     const res = await fetch(`/api/students/${id}`, { method: 'DELETE' })
     if (res.ok) {
       setStudents((current) => current.filter((s) => s.id !== id))
+      setError(null)
+    } else {
+      const body = await res.json().catch(() => null)
+      setError(body?.error ?? 'Gagal menghapus siswa')
     }
   }
 
-  if (!checked) return null
+  if (!checked && !error) return null
 
   return (
     <main className={styles.ledger}>
       <div className={styles.ledgerInner}>
         <h1 className={styles.title}>Kelola Siswa</h1>
-        <StudentForm submitLabel="Tambah" onSubmit={handleAdd} />
-        <StudentList students={students} onUpdate={handleUpdate} onDelete={handleDelete} />
+        {error && (
+          <p role="alert" className={styles.error}>
+            {error}
+          </p>
+        )}
+        {checked && (
+          <>
+            <StudentForm submitLabel="Tambah" onSubmit={handleAdd} />
+            <StudentList students={students} onUpdate={handleUpdate} onDelete={handleDelete} />
+          </>
+        )}
       </div>
     </main>
   )
