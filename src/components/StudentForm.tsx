@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import styles from './StudentForm.module.css'
 
 export interface StudentFormProps {
@@ -8,6 +8,7 @@ export interface StudentFormProps {
   submitLabel: string
   initialName?: string
   initialClass?: string
+  classOptions?: string[]
 }
 
 export function StudentForm({
@@ -15,10 +16,12 @@ export function StudentForm({
   submitLabel,
   initialName = '',
   initialClass = '',
+  classOptions,
 }: StudentFormProps) {
   const [name, setName] = useState(initialName)
   const [className, setClassName] = useState(initialClass)
   const [error, setError] = useState<string | null>(null)
+  const classListId = useId()
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -42,7 +45,15 @@ export function StudentForm({
           className={styles.input}
           value={className}
           onChange={(e) => setClassName(e.target.value)}
+          list={classOptions?.length ? classListId : undefined}
         />
+        {classOptions?.length ? (
+          <datalist id={classListId}>
+            {classOptions.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        ) : null}
       </label>
       {error && (
         <p role="alert" className={styles.error}>

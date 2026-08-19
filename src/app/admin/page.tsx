@@ -85,6 +85,10 @@ export default function AdminPage() {
 
   if (!checked && !error) return null
 
+  const classOptions = Array.from(new Set(students.map((s) => s.class))).sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true })
+  )
+
   return (
     <main className={styles.ledger}>
       <div className={styles.ledgerInner}>
@@ -96,8 +100,13 @@ export default function AdminPage() {
         )}
         {checked && (
           <>
-            <StudentForm submitLabel="Tambah" onSubmit={handleAdd} />
-            <StudentList students={students} onUpdate={handleUpdate} onDelete={handleDelete} />
+            <StudentForm submitLabel="Tambah" onSubmit={handleAdd} classOptions={classOptions} />
+            <StudentList
+              students={students}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+              classOptions={classOptions}
+            />
           </>
         )}
       </div>

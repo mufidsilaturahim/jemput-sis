@@ -20,6 +20,15 @@ describe('StudentForm', () => {
     expect(onSubmit).toHaveBeenCalledWith('Sasa', '1B')
   })
 
+  it('offers class suggestions from classOptions via a datalist', () => {
+    render(<StudentForm submitLabel="Tambah" onSubmit={() => {}} classOptions={['1A', '1B']} />)
+    const input = screen.getByLabelText('Kelas') as HTMLInputElement
+    const listId = input.getAttribute('list')
+    expect(listId).toBeTruthy()
+    const datalist = document.getElementById(listId!) as HTMLDataListElement
+    expect(Array.from(datalist.options).map((o) => o.value)).toEqual(['1A', '1B'])
+  })
+
   it('pre-fills initial values for editing', () => {
     render(
       <StudentForm
